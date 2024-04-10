@@ -1,0 +1,13 @@
+[workspace]
+
+members = [
+    "sandboxed",
+    "bindgen",
+    "mpk"]
+
+[package]
+name = "thesis"
+
+[dependencies]
+sandboxed = { path = "./sandboxed" }
+mpk = { path = "./mpk" }
