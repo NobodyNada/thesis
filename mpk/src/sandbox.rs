@@ -1,6 +1,9 @@
+#[allow(unused)]
 use super::*;
+#[allow(unused)]
 use std::{arch::asm, mem::ManuallyDrop, ptr::null_mut};
 
+#[allow(unused)]
 pub struct Sandbox {
     pkey: Option<std::io::Result<i32>>,
     stack: *mut libc::c_void,
@@ -8,8 +11,10 @@ pub struct Sandbox {
 
 unsafe impl Send for Sandbox {}
 
+#[cfg(feature = "mpk")]
 const SANDBOX_STACK_SIZE: usize = 1 << 23; // 8 MiB
 
+#[cfg(feature = "mpk")]
 static mut RETURNSTACK: *mut libc::c_void = null_mut();
 
 #[allow(unused)]
@@ -30,6 +35,7 @@ impl Sandbox {
     /// # Safety
     ///
     /// The provided function must not reference data that lives outside the sandbox.
+    #[cfg(feature = "mpk")]
     pub unsafe fn call<T, F: FnOnce() -> T + 'static>(&mut self, f: F) -> T {
         if self.init().is_none() {
             // MPK is not available, so just call the function directly
@@ -46,19 +52,19 @@ impl Sandbox {
         });
 
         let oldpkru = rdpkru();
-        let newpkru = pkru_set(oldpkru, 0, PKEY_DISABLE_WRITE);
+        let newpkru = pkru_set(oldpkru, 11, PKEY_DISABLE_WRITE);
 
         asm!(
             "
         mov [rip + {oldstack}], rsp  // Save old stack pointer
-        mov rsp, rdi                    // Switch to new stack
-        wrpkru                          // Switch to sandbox protection
-        call {_sandbox_call}            // Call sandboxed function
+        mov rsp, rdi                 // Switch to new stack
+        wrpkru                       // Switch to sandbox protection
+        call {_sandbox_call}         // Call sandboxed function
         
         mov rax, r12
         xor rcx, rcx
         xor rdx, rdx
-        wrpkru                          // Restore previous protection
+        wrpkru                       // Restore previous protection
         mov rsp, [rip + {oldstack}]  // Switch to old stack
         ",
             oldstack = sym RETURNSTACK,
@@ -75,6 +81,17 @@ impl Sandbox {
         ManuallyDrop::into_inner(sp.read().result)
     }
 
+    /// Calls a function within the sandbox.
+    ///
+    /// # Safety
+    ///
+    /// The provided function must not reference data that lives outside the sandbox.
+    #[cfg(not(feature = "mpk"))]
+    pub unsafe fn call<T, F: FnOnce() -> T + 'static>(&mut self, f: F) -> T {
+        f()
+    }
+
+    #[cfg(feature = "mpk")]
     fn init(&mut self) -> Option<i32> {
         if let Some(result) = &self.pkey {
             if let Ok(pkey) = result {
@@ -143,12 +160,14 @@ impl Sandbox {
     }
 }
 
+#[cfg(feature = "mpk")]
 #[repr(align(16))]
 union SandboxArgs<T, F: FnOnce() -> T + 'static> {
     f: ManuallyDrop<F>,
     result: ManuallyDrop<T>,
 }
 
+#[cfg(feature = "mpk")]
 unsafe extern "sysv64" fn _sandbox_call<T, F: FnOnce() -> T + 'static>(
     args: *mut SandboxArgs<T, F>,
 ) {
@@ -159,6 +178,7 @@ unsafe extern "sysv64" fn _sandbox_call<T, F: FnOnce() -> T + 'static>(
     });
 }
 
+#[cfg(feature = "mpk")]
 #[inline(always)]
 fn rdpkru() -> u32 {
     unsafe {
@@ -170,10 +190,12 @@ fn rdpkru() -> u32 {
 
 #[inline(always)]
 #[allow(unused)]
+#[cfg(feature = "mpk")]
 unsafe fn wrpkru(value: u32) {
     asm!("wrpkru", in("eax") value, options(nostack));
 }
 
+#[cfg(feature = "mpk")]
 fn pkru_set(pkru: u32, pkey: i32, prot: u32) -> u32 {
     assert!((0..0x10).contains(&pkey));
     assert!((..0x4).contains(&prot));
@@ -182,10 +204,12 @@ fn pkru_set(pkru: u32, pkey: i32, prot: u32) -> u32 {
     (pkru & !mask) | (prot << shift)
 }
 
+#[cfg(feature = "mpk")]
 fn pkey_alloc(flags: u32, access_rights: u32) -> i32 {
     unsafe { libc::syscall(libc::SYS_pkey_alloc, flags, access_rights) as i32 }
 }
 
+#[cfg(feature = "mpk")]
 unsafe fn pkey_mprotect(addr: *mut libc::c_void, len: usize, prot: i32, pkey: i32) -> i32 {
     libc::syscall(libc::SYS_pkey_mprotect, addr, len, prot, pkey) as i32
 }

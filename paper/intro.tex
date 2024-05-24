@@ -1,0 +1,74 @@
+\chapter{Introduction}
+
+In recent years the systems programming industry has seen increased adoption of memory-safe
+programming languages such as Rust, due to their ability to categorically prevent memory corruption
+bugs and the associated security risks. However, in a mixed program containing both memory-safe and
+memory-unsafe code within the same address space, memory corruption issues in the memory-unsafe
+portions can still lead to manipulation or takeover of the entire program, as the properties of
+memory safety do not restrict or limit undefined behavior caused by memory-unsafe
+code~\cite{hu:crust, lolcads:e2va}; this class of vulnerability is listed in MITRE's Common Weakness
+Enumeration database as CWE-111~\cite{mitre:cwe-111}.
+
+Ideally, modern software systems would be designed from the ground up in memory-safe programming
+languages (such as Java, Python, or Rust), but this is often infeasible in practice due to the costs
+of rewriting large amounts of legacy code. Thus, many real-world software systems combine
+memory-safe and memory-unsafe code within the same program, such as by adding memory-safe components
+to a mostly memory-unsafe codebase, or by embedding memory-unsafe libraries into memory-safe
+applications~\cite{rust:ffi, oracle:jni}. Such a mixed program has a smaller attack surface than one
+written entirely in a memory-unsafe language, but the memory-unsafe components still present an
+attractive exploitation target, as an attacker who exploits a vulnerability such as a buffer
+overflow or use-after-free in memory-unsafe code may be able to corrupt variables used by
+memory-safe portions of the program.
+
+Software fault isolation is a family of techniques that can be used to separate a program into
+protection domains and achieve memory protection between domains~\cite{wahbe:sfi}. Within the
+context of a program containing a mixture of memory-safe and memory-unsafe code, software fault
+isolation can be used to prevent vulnerabilities within memory-unsafe code from affecting the
+integrity of data used by safe code. There is existing research demonstrating the application of
+software fault isolation to this problem space~\cite{ghoshn:enclosure, kirth:pkru}, but even with
+such protection the authors of the memory-safe portions of such a program must take caution when
+accessing values produced by memory-unsafe code, as memory corruption within memory-unsafe code may
+result in invalid values that violate invariants expected by the memory-safe programming language.
+For example, if the memory-safe portion of the program dereferences a pointer produced within the
+memory-unsafe portion without proper validation, an attacker may be able to corrupt the address of
+the pointer in a way that causes the memory-safe code to corrupt its own memory.
+
+We present a scheme for automatically sandboxing memory-unsafe C code within a Rust program, using
+x86 Memory Protection Keys (MPK)~\cite{intel:system, linux:mpk} to maintain separation between data
+used by the memory-unsafe and memory-safe portions of the program. MPK allows the kernel to tag page
+table entries with protection keys, and allows user programs to dynamically restrict access to
+memory tagged with specific keys without the need for a system call. We use this capability to limit
+the ability of memory-unsafe code to access memory belonging to the safe portions of a program,
+maintaining the integrity of the memory-safe portions of the program even if the attacker can
+corrupt the memory-unsafe portions.
+
+We modified Rust's \cc{bindgen} library to generate safe interfaces to sandboxed code.
+\cc{bindgen}~\cite{rust:bindgen} is a procedural macro that generates Rust interfaces to code
+written in other programming languages such as C and C++; we modified \cc{bindgen} to automatically
+manage the process of configuring MPK while entering and exiting the sandbox. Additionally, we
+define a type-safe interface allowing an application to interact with pointers and data accessible
+to sandboxed code without risk of misuse leading to undefined behavior. We achieve this using a
+combination of compile-time invariants expressed using Rust's type system and borrow checker, and
+low-cost runtime checks verifying pointer bounds and alignment.
+
+We measured a performance overhead of approximately 25ns each time a function call and return
+crosses the boundary between protected and sandboxed code. The impact of this on a production
+application will vary depending on how many function calls the application makes relative to the
+work performed within the sandboxed function; we measured a 7\% performance overhead in a benchmark
+that uses the \cc{cmark} Markdown parsing library to parse a small document within a sandbox, and a
+negligible overhead in a benchmark that invokes sandboxed \cc{cmark} on a larger document.
+
+Our work shows that MPK can application programs today can benefit from lightweight, low-overhead,
+secure sandboxing as a simple line of defense against supply-chain attacks through memory-unsafe
+code. Our implementation does not completely eliminate memory corruption as an attack vector, it
+only limits the scope of data that an attacker can corrupt. Additionally, it it is not completely
+transparent: the Rust programmer must make small modifications to the portions of their program that
+interact with memory-unsafe code. However, our work towards automatically generating safe interfaces
+to sandboxed code greatly reduces the development effort and likelihood of making security-critical
+mistakes compared to approaches that require the programmer to directly interact with unsafe
+functions. And as our sandboxing scheme requires no compiler modifications or language extensions,
+it is simpler to integrate into real-world applications than schemes that require large amounts of
+custom compiler tooling or break compatibility with existing applications.
+
+\paragraph{Source Code} Our code is available on GitHub at
+\url{https://github.com/NobodyNada/thesis}.

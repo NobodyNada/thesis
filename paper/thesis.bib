@@ -1,0 +1,284 @@
+@conference {google:limits,
+    author = {Chris Palmer},
+    title = {The Limits of Sandboxing and Next Steps},
+    year = {2021},
+    publisher = {USENIX Association},
+    month = feb
+}
+
+@misc{google:android-vulns,
+    author = {Kevin Deus and Joel Galenson and Billy Lau and Ivan Lozano},
+    title = {Data Driven Security Hardening in {Android}},
+    year = {2021},
+    publisher = {Google Security Blog},
+    note = {\url{https://security.googleblog.com/2021/01/data-driven-security-hardening-in.html}}
+}
+
+@misc{google:android-vulns-2,
+    author = {Jeff Vander Stoep and Chong Zhang},
+    title = {Queue the Hardening Enhancements},
+    year = {2019},
+    publisher = {Google Security Blog},
+    note = {\url{https://security.googleblog.com/2019/05/queue-hardening-enhancements.html}}
+}
+
+@misc{google:android-rust,
+    author = {Jeffrey Vander Stoep},
+    title = {Memory Safe Languages in {Android} 13},
+    year = {2019},
+    publisher = {Google Security Blog},
+    note = {\url{https://security.googleblog.com/2022/12/memory-safe-languages-in-android-13.html}},
+}
+
+@misc{chromium:memory-safety,
+    title = {Chromium Security: Memory safety},
+    year = {2020},
+    publisher = {The Chromium Projects},
+    note = {\url{https://www.chromium.org/Home/chromium-security/memory-safety/}}
+}
+
+@misc{msrc:memory-safety,
+    title = {A proactive approach to more secure code},
+    year = {2019},
+    publisher = {Microsoft Security Response Center},
+    note = {\url{https://msrc.microsoft.com/blog/2019/07/a-proactive-approach-to-more-secure-code/}}
+}
+
+@misc{cisa:memory-safety,
+    title = {The Case for Memory Safe Roadmaps: Why Both {C}-Suite Executives and Technical Experts Need to Take Memory Safe Coding Seriously},
+    publisher = {United States Cybersecurity and Infrastructure Security Agency},
+    year = {2023},
+    note = {\url{https://www.cisa.gov/sites/default/files/2023-12/The-Case-for-Memory-Safe-Roadmaps-508c.pdf}}
+}
+
+@misc{rust,
+    title = {Rust Programming Language},
+    publisher = {Rust Foundation},
+    note = {\url{https://www.rust-lang.org/}}
+}
+
+@misc{intel:system,
+    title = { Intel 64 and {IA-32} Architectures Software Developer’s Manual, Volume 3: System Programming Guide },
+}
+
+@misc{linux:mpk,
+    title = { Memory Protection Keys },
+    note = {\url{https://docs.kernel.org/core-api/protection-keys.html}}
+}
+
+@misc{gnu:chroot,
+    title = { chroot: Run a command with a different root directory },
+    note = {\url{https://www.gnu.org/software/coreutils/chroot}},
+}
+
+@inproceedings{kim:mbox,
+  title         = {Practical and Effective Sandboxing for Non-root Users},
+  author        = {Taesoo Kim and Nickolai Zeldovich},
+  crossref      = {ATC13},
+  www-url       = "http://pdos.csail.mit.edu/mbox"
+}
+
+@misc{linux:landlock,
+    title = { Landlock: unprivileged access control },
+    author = {Mickaël Salaün},
+    year = {2023},
+    note = {\url{https://docs.kernel.org/userspace-api/landlock.html}}
+}
+
+@InProceedings{park:libmpk,
+  title         = {{libmpk: Software Abstraction for Intel Memory Protection Keys (Intel MPK)}},
+  author        = {Soyeon Park and Sangho Lee and Wen Xu and Hyungon Moon and Taesoo Kim},
+  crossref      = {ATC19},
+  www-section   = sec-sys,
+  www-url       = "https://github.com/sslab-gatech/libmpk",
+}
+
+@inproceedings{ghoshn:enclosure,
+    author = {Ghosn, Adrien and Kogias, Marios and Payer, Mathias and Larus, James R. and Bugnion, Edouard},
+    title = {Enclosure: language-based restriction of untrusted libraries},
+    year = {2021},
+    isbn = {9781450383172},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/3445814.3446728},
+    doi = {10.1145/3445814.3446728},
+}
+
+@inproceedings{kirth:pkru,
+    author = {Kirth, Paul and Dickerson, Mitchel and Crane, Stephen and Larsen, Per and Dabrowski, Adrian and Gens, David and Na, Yeoul and Volckaert, Stijn and Franz, Michael},
+    title = {PKRU-safe: automatically locking down the heap between safe and unsafe languages},
+    year = {2022},
+    isbn = {9781450391627},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/3492321.3519582},
+    doi = {10.1145/3492321.3519582},
+}
+
+@misc{rust:cargo-bench,
+    title = {cargo-bench(1)},
+    publisher = {Rust Foundation},
+    note = {\url{https://doc.rust-lang.org/cargo/commands/cargo-bench.html}}
+}
+
+@misc{cmark,
+    title = {cmark},
+    author = {CommonMark},
+    note = {\url{https://github.com/commonmark/cmark}}
+}
+
+@misc{cmark:benchmarks,
+    title = {Benchmarks},
+    author = {CommonMark},
+    note = {\url{https://github.com/commonmark/cmark/blob/master/benchmarks.md}}
+}
+
+@misc{pro-git,
+    title = {Pro {Git}, 1st Edition},
+    author = {Scott Chacon},
+    note = {\url{https://github.com/progit/progit}}
+
+}
+
+@inproceedings{wahbe:sfi,
+  title={Efficient software-based fault isolation},
+  author={Wahbe, Robert and Lucco, Steven and Anderson, Thomas E and Graham, Susan L},
+  crossref = {SOSP93},
+  pages={203--216},
+  year={1993}
+}
+
+@article{biba:integrity,
+  title={Integrity considerations for secure computer systems},
+  author={Biba, Kenneth J and others},
+  year={1977},
+  publisher={MITRE Corporation}
+}
+
+@article{bell:confidentiality,
+  title={Secure computer systems: Mathematical foundations},
+  author={Bell, D Elliott and LaPadula, Leonard J},
+  year={1973},
+  publisher={MITRE Corporation}
+}
+
+@misc{bytemuck:AnyBitPattern,
+    title = {\cc{AnyBitPattern}},
+    publisher = {bytemuck},
+    note = {\url{https://docs.rs/bytemuck/latest/bytemuck/trait.AnyBitPattern.html}}
+}
+
+@misc{lwn:nolibc,
+    title = {Nolibc: a minimal {C}-library replacement shipped with the kernel},
+    author = {Willy Tarreau},
+    publisher={LWN},
+    note = {\url{https://lwn.net/Articles/920158/}}
+}
+
+@misc{musl,
+    title = {musl libc},
+    note = {\url{https://musl.libc.org/}}
+}
+
+@inproceedings{schrammel:donky,
+    title = {Donky: Domain Keys – Efficient In-Process Isolation for {RISC-V} and x86},
+    crossref = {SEC20},
+    author = {David Schrammel and Samuel Weiser and Stefan Steinegger and Martin Schwarzl and Michael Schwarz and Stefan Mangard and Daniel Gruss}
+}
+
+@misc{arm:domains,
+    title = {ARM Architecture Reference Manual ARMv7-A and ARMv7-R edition, issue B},
+    year = {2008},
+    publisher = {Arm Limited},
+    pages = {B3-31}
+}
+
+@misc{peter:sprr,
+    title = {Apple Silicon Hardware Secrets: {SPRR} and Guarded Exception Levels ({GXF})},
+    author = {Sven Peter},
+    note = {\url{https://blog.svenpeter.dev/posts/m1_sprr_gxf/}},
+    year = {2021},
+}
+
+@misc{apple:jit,
+    title = {Porting just-in-time compilers to {Apple} silicon},
+    publisher = {Apple Developer},
+    note = {\url{https://developer.apple.com/documentation/apple-silicon/porting-just-in-time-compilers-to-apple-silicon}}
+}
+
+@misc{asahi,
+    title = {{Asahi Linux}},
+    note = {\url{https://asahilinux.org/}}
+}
+
+@misc{rust:bindgen,
+    title = {bindgen},
+    publisher = {Rust Foundation},
+    note = {\url{https://github.com:rust-lang/bindgen}}
+}
+
+@inproceedings{erlingsson:xfi,
+    title = {{XFI}: Software Guards for System Address Spaces},
+    author = {{\'U}lfar Erlingsson and Mart{\'\i}n Abadi and Michael Vrable and Mihai Budiu and George C. Necula},
+    crossref = {OSDI06},
+}
+
+@inproceedings{witchel:mondiran,
+    title = {Mondrian Memory Protection},
+    author = {Emmett Witchel and Josh Cates and Krste Asanovi{\'c}},
+    crossref = {ASPLOS02}
+}
+
+@inproceedings{vahldiek-oberwagner:erim,
+    title = {{ERIM}: Secure, Efficient In-process Isolation with Protection Keys ({MPK})},
+    author = {Anjo Vahldiek-Oberwagner and Eslam Elnikety and Nuno O. Duarte and Michael Sammler and Peter Druschel and Deepak Garg},
+    crossref = {SEC19}
+}
+
+@inproceedings{hedayati:hodor,
+    title = {Hodor: Intra-Process Isolation for High-Throughput Data Plane Libraries},
+    author = {Mohammad Hedayati and Spyridoula Gravani and Ethan Johnson and John Criswell and Michael L. Scott},
+    crossref = {ATC19}
+}
+
+@inproceedings{voulimeneas:cerberus,
+    author = {Voulimeneas, Alexios and Vinck, Jonas and Mechelinck, Ruben and Volckaert, Stijn},
+    title = {You shall not (by)pass! practical, secure, and fast PKU-based sandboxing},
+    crossref = {EUROSYS22}
+}
+
+@article{mitre:cwe-111,
+    publisher = {MITRE},
+    title = {{CWE-111}: Direct Use of Unsafe {JNI}},
+    year = {2006}
+}
+
+@article{lolcads:e2va,
+    title = {Diving into the art of userspace exploitation under Android - Introducing E²VA},
+    publisher = {lolcads},
+    year = {2022},
+    note = {\url{https://lolcads.github.io/posts/2022/11/diving_into_the_art_of_userspace_exploitation_under_android/}}
+}
+
+
+@inproceedings{hu:crust,
+  author={Hu, Shuang and Hua, Baojian and Xia, Lei and Wang, Yang},
+  booktitle={2022 IEEE 22nd International Conference on Software Quality, Reliability and Security (QRS)}, 
+  title={CRUST: Towards a Unified Cross-Language Program Analysis Framework for Rust}, 
+  year={2022},
+  pages={970-981},
+}
+
+@article{rust:ffi,
+    title = {{FFI}},
+    booktitle = {The Rustonomicon},
+    publisher = {Rust Foundation},
+    note = {\url{https://doc.rust-lang.org/nomicon/ffi.html}}
+}
+
+@article{oracle:jni,
+    title = {Java Native Interface Specification},
+    publisher = {Oracle Corporation},
+    year = {2017},
+    note = {\url{https://docs.oracle.com/en/java/javase/11/docs/specs/jni/intro.html}}
+}

@@ -1,0 +1,66 @@
+\chapter{Discussion}
+
+\section{Limitations and future direction}
+
+We only address the issue of memory corruption; other types of security vulnerabilities that can be
+caused by unsafe or untrusted code are outside the scope of our research. Additionally, we do not
+aim to \textit{prevent} memory corruption within untrusted code, only to isolate the untrusted code
+to limit the capabilities of memory-corruption based attacks. Our security model does not prevent an
+attacker from using memory corruption to change the output of sandboxed code, or even achieving full
+remote code execution with the limitation of only being able to write to memory used by the
+sandboxed portions of the program.
+
+Notably, we do not consider the effects of system calls. An attacker could corrupt memory within the
+sandboxed portion of a program and cause the program to execute system calls that (for instance) run
+arbitrary shell commands, corrupt memory indirectly using operating features like the \cc{/proc}
+filesystem, or disable memory protection features with \cc{mprotect} or related syscalls. Thus,
+our sandboxing scheme must be combined with a system call sandboxing scheme to achieve security
+against such attacks.
+
+Our implementation does not properly support dynamically linking to sandboxed libraries, or calling
+dynamically-linked functions from within a sandbox. This is not a fundamental limitation of our
+technique, but rather a feature that is unsupported by our proof-of-concept research implementation.
+Dynamic linking should be relatively straightforward to support, as dynamically linked libraries are
+loaded as separate images in memory with separate global offset tables, data sections, etc., making
+it easier to identify the boundaries of the sandbox than for static libraries.
+
+Additionally, our work supports calls from safe code into unsafe code, but we have not explored the
+other direction: unsafe code calling functions written in a safe language. Extending our techniques
+to support calls in both directions is a useful future direction for our research.
+
+We only support running sandboxed code on a single thread, due to the aliasing requirements for
+Rust's reference types: in order to verify that immutably-referenced data is not modified and that
+mutably-referenced data is not aliased, we enforce through the type system that no sandboxed code
+can be running while Rust code is interacting with its memory. Extending our approach to support
+multithreading would require significant changes to this model.
+
+\section{Other architectures}
+
+Our implementation only functions on x86, because MPK is an x86-specific feature. Our approach could
+be ported to other architectures, provided similar hardware or software functionality allowing for
+sufficiently low-overhead memory protection domains that can be changed by the user application at
+runtime.
+
+\paragraph{RISC-V} Schrammel et al.~\cite{schrammel:donky} implement a hardware extension for RISC-V
+allowing a page table entry to specify one of up to 1024 domain keys, in addition to the standard
+page table permission bits. A user program can write to the \cc{DKRU} register to configure
+permission restrictions on a per-key basis, similar to MPK on x86. Their approach supports up to
+1024 domain keys, allowing for many more protection domains than MPK (which is limited to 16), but
+only four domain keys can be active at any given time (memory protected by an inactive key is
+inaccessible to the program).
+
+\paragraph{Arm} The AArch32 architecture supports configurable domains in AArch32 with a similar
+implementation to MPK, except that reconfiguration of memory domains is only available in privileged
+mode; a user program using the feature for software fault isolation would thus need to issue a
+system call whenever it needs to change memory permissions. The feature is primarily designed for
+allowing faster context switches on embedded systems rather than application-level sandboxing, and
+was removed in AArch64.
+
+Apple maintains a proprietary extension for ARM known as SPRR~\cite{peter:sprr}. With this
+extension, page table permission bits are repurposed as indices into a table that can be configured
+using system registers, some of which are user-accessible. Apple currently uses this functionality
+to enforce $\text W \oplus \text X$ permissions for programs using JIT-compiled code, exposing userspace APIs which
+write to these system registers to quickly toggle regions of memory between writable and executable
+without requiring a system call~\cite{apple:jit}. This functionality could be used (within a
+modified macOS or Asahi Linux~\cite{asahi} kernel) to implement software fault isolation on devices
+with Apple processors.

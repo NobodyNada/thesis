@@ -1,0 +1,169 @@
+\chapter{Design}
+\section{Enforcing Isolation with Memory Protection Keys}
+
+In order to maintain separation between sandboxed and protected data, we assign the default memory
+protection key (with ID 0) to the executable image, the data section associated with Rust code, all
+heap pages allocated by Rust code, and the Rust stack. (We use the default key for this purpose so
+that we don't need to make extensive changes to the Rust build process and runtime libraries --
+everything that we don't explicitly assign a protection key uses the default key.) We allocate a
+second protection key for sandboxed data, and we assign this key to the data section of all C object
+files, all heap pages allocated by sandboxed code, and a dedicated stack we allocate for sandboxed
+code.
+
+We define a thunk function that handles calls from safe functions to a sandboxed function. This
+function:
+
+\squishlist
+    \item Copies the function parameters onto the sandboxed stack.
+    \item Saves the safe stack pointer to a static variable living within protected memory at a constant
+        address (relative to the program image base under address-space layout randomization).
+    \item Switches the \cc{rsp} register to point to the sandboxed stack.
+    \item Uses the \cc{wrpkru} instruction to disable read access to safe memory.
+    \item Calls the sandboxed function using the parameters saved to the sandboxed stack, saving the
+        return value to the sandboxed stack.
+    \item Uses the \cc{wrpkru} instruction to re-enable write access to safe memory.
+    \item Restores the safe stack pointer.
+    \item Returns to the safe caller, passing the return value obtained from the sandboxed stack.
+\squishend
+
+\bigskip
+As long as all calls to sandboxed functions go through this thunk function, our implementation
+enforces the first condition of isolation as defined above (but not the second, yet). The use of
+memory protection keys enforce that any attempt by the sandboxed code to corrupt safe memory will
+cause an access violation, and the use of a separate stack for sandboxed code is necessary to
+prevent stack buffer overflows and similar forms of memory corruption from affecting local variables
+and return addresses use by safe code. It is important that the safe stack pointer be stored in a
+location that is protected from writes by MPK so that an attacker who exploits bugs in sandboxed
+code cannot point the safe stack somewhere else; the fact that the stack pointer is restored
+immediately after the $\cc{wrpkru}$ instruction also prevents an attacker from hijacking the
+program's control flow after returning from a sandboxed function call.
+
+\begin{figure}[!ht]
+    \centering
+    \includegraphics{fig/stack}
+    \caption[Diagram of stack usage]{Diagram of stack usage. Sandboxed code is on a separate stack
+    so it cannot corrupt local variables and return addresses belonging to safe code. The
+    \cc{RETURNSTACK} global variable tracks the original location of the stack pointer when
+    returning from sandboxed code. MPK is used to enforce that sandboxed code cannot write to the
+    protected stack or the \cc{RETURNSTACK} pointer.}
+    \label{f:stack}
+\end{figure}
+
+
+There is one caveat with the implementation as described above: if an attacker can cause sandboxed
+code to execute the \cc{wrpkru} instruction, they may be able to remove the protections on safe
+memory and then proceed to violate isolation. To prevent this attack vector, we require that the
+program must never execute the \cc{wrpkru} instruction except in the teardown portion of the thunk
+function. This means that the instruction should never be intentionally executed by the program
+outside of the thunk function, and that an attacker should not be able to use control-flow hijacking
+techniques such as Return-Oriented Programming to cause the execution of a \cc{wrpkru} instruction.
+Thus, we require the program use some form of control flow protection such as x86 Control-flow
+Enforcement Technology (CET) to prevent an attacker from being able to reach a \cc{wprkru} gadget,
+or binary rewriting techniques such as those employed by Vahldiek-Oberwagner et
+al.~\cite{vahldiek-oberwagner:erim} or Hedayati et al.~\cite{hedayati:hodor} to prevent the compiler
+from generating executable byte sequences that could be interpreted \cc{wrpkru} instructions.
+
+\section{Type-Safely Preventing Undefined Behavior with bindgen}
+
+Our modified version of \cc{bindgen} applies the following modifications to the generated Rust bindings to C code:
+
+\squishlist
+    \item Functions are imported as member functions on a "sandbox object", rather than free
+        functions. (The sandbox object uniquely identifies a sandbox domain with an associated
+        memory protection key and sandbox stack).
+    \item Functions are wrapped using the thunk described in the previous section, which sets up the
+        sandbox permissions appropriately before dispatching to the sandboxed code.
+    \item All types involved in function parameter or return types must conform to
+        \cc{AnyBitPattern}, a marker trait provided by the \cc{bytemuck} crate denoting types
+        with no invalid representations.
+    \item All pointer types are converted to wrapper types named \cc{SandboxPtr} (for \cc{const}
+        pointers) and \cc{SandboxPtrMut} (for mutable pointers), which verify at runtime that the
+        pointers are valid and point to sandboxed data, and allow for safe Rust access to the
+        pointer contents.
+\squishend
+
+For example, a C function with signature \cc{const int *foo(int *p)} maps to the Rust binding shown
+in \autoref{c:binding-example}. The generated assembly is shown in \autoref{c:binding-example-asm}.
+
+\begin{figure}[ht]
+\input{code/binding-example.rs}
+\coderule
+\caption[Example of generated Rust bindings to a C function]{
+    Example of bindings generated from a C function with signature \cc{const int *foo(int *p)}.
+    The underlying C function is imported privately (in the \cc{extern "C"} block), and a publicly
+    accessible wrapper function is generated which uses our runtime library to move parameters into
+    sandboxed memory, update the PKRU to restrict access to protected memory, call the sandboxed
+    function, restore the previous value of the PKRU, and validate the returned pointer.
+}
+\label{c:binding-example}
+\end{figure}
+
+
+\begin{figure}[ht]
+\input{code/binding-example.asm}
+\coderule
+\caption[Example of generated Rust bindings to a C function, compiled output]{Example of generated
+    bindings, compiled output (error-handling slow-path code omitted for brevity). The generated
+    assembly initializes MPK if it has not been done yet, switches the stack pointer to the
+    sandboxed stack, updates the PKRU, calls the sandboxed function, and restores the old PKRU and
+    stack pointer before returning.}
+\label{c:binding-example-asm}
+\end{figure}
+
+\section{Safe Pointers to Sandboxed Data}
+\label{s:aliasing}
+
+Safe Rust code is not allowed to use raw pointers directly, because use of raw pointers requires the
+programmer to uphold a set of invariants that are not checked by the compiler:
+
+\squishlist
+    \item If a pointer is accessed, it must be non-null, properly aligned,
+        and point to a valid object of the correct type.
+    \item If a pointer is converted to a safe reference type, we must uphold the aliasing rules.
+    \squishlist
+        \item If a mutable reference exists to an object in memory, that reference must be unique
+            throughout its entire lifetime (i.e. no other reference to the same object may exist for
+            as long as the mutable reference is valid)
+        \item If an immutable reference exists to an object in memory, that object must not be modified.
+        \item If a mutable reference exists to an object in memory, that object must not be accessed
+            at all except via the mutable reference.
+    \squishend
+\squishend
+
+In order to allow Rust code to safely interact with sandboxed memory, we allow a \cc{SandboxPtr}
+or \cc{SandboxPtrMut} to be converted into a safe Rust reference. We use the type system to ensure
+that all of these invariants are upheld:
+
+\squishlist
+    \item The constructor for a \cc{SandboxPtr} or \cc{SandboxPtrMut} verifies the pointer's
+        alignment, and checks that the pointer points to an object contained within the bounds of
+        the sandbox. This check ensures that sandboxed code that is buggy or compromised cannot
+        return a pointer to protected data, which could cause our Rust program to corrupt memory or
+        violate aliasing rules. Additionally, conversion to a reference includes a null check.
+    \item Converting a \cc{SandboxPtr} or \cc{SandboxPtrMut} to a reference requires the caller
+        to have a reference of matching mutability and lifetime to the sandbox object (and calling a
+        sandboxed function requires a mutable reference to the sandbox object). This enforces the
+        aliasing rules:
+    \squishlist
+        \item Since creating a mutable reference requires a mutable reference to the sandbox object,
+            only one mutable reference to sandboxed data may exist at a time. This ensures that the
+            single-mutability rule is not violated even if sandboxed code returns unexpectedly
+            overlapping pointers.
+        \item Since creating an immutable reference requires an immutable reference to the sandbox
+            object, no mutable references to sandbox data may be created  while an immutable
+            reference exists. However, the programmer may freely create multiple immutable
+            references to sandboxed data.
+        \item Since calling a sandboxed function requires a mutable reference to the sandbox object,
+            sandboxed functions may not be called (and thus cannot modify memory) while references
+            to sandboxed memory exist.
+    \squishend
+\squishend
+
+Our approach allows programs to freely interact with C APIs that consume and return pointers to
+objects in memory, without requiring the use of \cc{unsafe} blocks and without risk of undefined
+behavior. The limitation that only one mutable reference to sandboxed data can exist at any time is
+a severe restriction to our model, but some form of this restriction must exist in order to ensure
+the aliasing rules are upheld in the presence of misbehaving code inside the sandbox. If needed,
+programmers can circumvent these restrictions with the use of an \cc{unsafe} block, and our work
+can be extended to relax these restrictions somewhat (for example, by checking for aliasing at
+runtime).

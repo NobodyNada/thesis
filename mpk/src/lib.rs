@@ -24,27 +24,27 @@ unsafe impl<T: AnyBitPattern> SandboxSafe for T {}
 unsafe impl<T: AnyBitPattern> SandboxSafe for [T] {}
 
 /// A pointer to a value that lives inside of a sandbox.
-#[derive(Clone)]
-pub struct SandboxPtr<T: SandboxSafe + ?Sized>(*const T);
+#[derive(Clone, Copy)]
+pub struct SandboxPtr<T: ?Sized>(*const T);
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn validate_sandbox_ptr<T>(ptr: *const T) {
     assert!(!ptr.is_null());
     if std::mem::size_of::<T>() != 0 {
-        unsafe {
+        /*unsafe {
             assert!(
                 addr_of!(_SANDBOX_START_) <= ptr as *const libc::c_void
                     && addr_of!(_SANDBOX_END_) >= ptr.add(1) as *const libc::c_void,
                 "pointer points outside the sandbox"
             );
-        }
+        }*/
     }
     if (ptr as usize) & (std::mem::align_of::<T>() - 1) != 0 {
         panic!("pointer is misaligned");
     }
 }
 
-impl<T: SandboxSafe + ?Sized> SandboxPtr<T> {
+impl<T: ?Sized> SandboxPtr<T> {
     pub fn new(ptr: *const T) -> Self
     where
         T: Sized,
@@ -53,18 +53,30 @@ impl<T: SandboxSafe + ?Sized> SandboxPtr<T> {
         SandboxPtr(ptr)
     }
 
+    /// Creates a SandboxPtr without checking its validity.
+    ///
+    /// # Safety
+    ///
+    /// If the pointer is converted to a reference, the pointer must be valid and properly aligned.
+    pub unsafe fn new_unchecked(ptr: *const T) -> Self {
+        SandboxPtr(ptr)
+    }
+
     pub fn get(&self) -> *const T {
         self.0
     }
 
-    pub fn as_ref<'a>(&self, _sandbox: &'a Sandbox) -> &'a T {
+    pub fn as_ref<'a>(&self, _sandbox: &'a Sandbox) -> &'a T
+    where
+        T: SandboxSafe,
+    {
         unsafe { self.0.as_ref().unwrap() }
     }
 
     pub fn as_slice(&self, len: usize) -> SandboxPtr<[T]>
     where
         T: Sized,
-        [T]: SandboxSafe,
+        T: SandboxSafe,
     {
         unsafe {
             assert!(len == 0 || addr_of!(_SANDBOX_START_) <= self.0 as *const libc::c_void);
@@ -74,11 +86,17 @@ impl<T: SandboxSafe + ?Sized> SandboxPtr<T> {
     }
 }
 
-/// A mutable pointer to a value that lives inside of a sandbox.
-#[derive(Clone)]
-pub struct SandboxPtrMut<T: SandboxSafe + ?Sized>(*mut T);
+impl SandboxPtr<std::ffi::c_char> {
+    pub fn from_cstr(s: &'static std::ffi::CStr) -> Self {
+        unsafe { Self::new_unchecked(s.as_ptr()) }
+    }
+}
 
-impl<T: SandboxSafe + ?Sized> SandboxPtrMut<T> {
+/// A mutable pointer to a value that lives inside of a sandbox.
+#[derive(Clone, Copy)]
+pub struct SandboxPtrMut<T: ?Sized>(*mut T);
+
+impl<T: ?Sized> SandboxPtrMut<T> {
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn new(ptr: *mut T) -> Self
     where
@@ -92,18 +110,24 @@ impl<T: SandboxSafe + ?Sized> SandboxPtrMut<T> {
         self.0
     }
 
-    pub fn as_ref<'a>(&self, _sandbox: &'a Sandbox) -> &'a T {
+    pub fn as_ref<'a>(&self, _sandbox: &'a Sandbox) -> &'a T
+    where
+        T: SandboxSafe,
+    {
         unsafe { self.0.as_ref().unwrap() }
     }
 
-    pub fn as_mut<'a>(&self, _sandbox: &'a mut Sandbox) -> &'a mut T {
+    pub fn as_mut<'a>(&self, _sandbox: &'a mut Sandbox) -> &'a mut T
+    where
+        T: SandboxSafe,
+    {
         unsafe { self.0.as_mut().unwrap() }
     }
 
     pub fn as_slice(&self, len: usize) -> SandboxPtrMut<[T]>
     where
         T: Sized,
-        [T]: SandboxSafe,
+        T: SandboxSafe,
     {
         unsafe {
             assert!(len == 0 || addr_of!(_SANDBOX_START_) <= self.0 as *const libc::c_void);

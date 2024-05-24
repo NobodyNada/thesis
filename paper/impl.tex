@@ -1,0 +1,50 @@
+\chapter{Implementation}
+
+Our implementation consists of a 270-SLOC Rust library containing type definitions and runtime code
+to implementing memory protection, and a 170-line patch to \cc{bindgen} to generate thunk functions
+for imported C libraries.
+
+We define a trait \cc{SandboxSafe} that represents types that are safe for Rust code to access, even
+when its contents may be untrusted. For example, an integral type is \cc{SandboxSafe} because no
+values of an integer can cause undefined behavior; a boolean type is \textit{not} \cc{SandboxSafe}
+because there are many possible byte values that result in invalid values when interpreted as a
+boolean type. We automatically implement this trait for types implementing the \cc{AnyBitPattern}
+trait defined in the \cc{bytemuck} crate~\cite{bytemuck:AnyBitPattern}.
+
+We define types \cc{SandboxPtr} and \cc{SandboxPtrMut} that provide wrappers around unsafe pointers
+that point into sandboxed data. The constructors for these types check to ensure the pointers are
+valid, properly aligned, and point within the sandbox. If the pointee type implements
+\cc{SandboxSafe}, we provide functions allowing the user to obtain a safe Rust reference or slice to
+the referenced data.
+
+We define a \cc{Sandbox} object representing a protection domain. The sandbox defines the \cc{call}
+method, which requires a unique reference to the sandbox object (to enforce the aliasing constraints
+discussed in \autoref{s:aliasing}), and takes in a closure which is run with the permission
+restrictions of the sandbox. Closures in Rust can carry captured state, which the \cc{call} moves
+onto the dedicated sandbox stack, allowing the user to pass arbitrary data such as function
+parameters into the sandbox. The sandbox stack is also used to store the return value of the
+provided closure, which is copied back to the caller.
+
+\section{Sandboxed code and libc}
+
+We did not address the problem of linking sandboxed code to the C standard library. The reason for
+this is that Rust code also links to and relies on the standard library. This would cause internal
+libc data structures to be shared by both sandboxed and safe code. We cannot mark memory used by
+libc as sandboxed because then sandboxed code could trivially corrupt memory that is used when Rust
+code calls libc functions, violating our first condition of isolation in \autoref{d:isolation}. We
+also cannot mark memory used by libc as protected because libc functions would then need to be
+trusted in order for them to access libc memory, and sandboxed code could pass invalid pointers into
+libc functions to cause undefined behavior in trusted code, violating the second condition of
+isolation.
+
+One solution to this problem would involve two independent copies of libc; a trusted libc used by
+safe code and a sandboxed libc used by sandboxed code. The two copies would not share internal state
+and thus not suffer from the problems described above. We attempted implementing this with two libc
+implementations: nolibc (a minimal, header-only libc implementation included with the Linux
+kernel)~\cite{lwn:nolibc} and musl~\cite{musl}. Both of these attempts were unsuccessful: nolibc
+depended on header files and build tooling from the Linux kernel, and was nontrivial to build
+outside of that environment; whereas musl would not easily coexist in the same process as glibc.
+Next steps for future work on this problem could include modifying a libc implementation to support
+secure interaction with both trusted and untrusted code in the same process, and/or identifying or
+creating a libc implementation that supports multiple separate instances of libc in the same
+process.

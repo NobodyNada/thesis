@@ -1,0 +1,8 @@
+
+running 3 tests
+test bench::cmark_large  ... bench:  51,445,073 ns/iter (+/- 479,296)
+test bench::cmark_simple ... bench:         852 ns/iter (+/- 12)
+test bench::nop          ... bench:           1 ns/iter (+/- 0)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 3 measured; 0 filtered out; finished in 16.01s
+

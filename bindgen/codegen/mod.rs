@@ -4252,7 +4252,10 @@ impl CodeGenerator for Function {
             attributes.push(attributes::link_name::<true>(&name));
         }
 
-        assert!(!signature.is_variadic(), "variadic arguments are unsupported");
+        if signature.is_variadic() {
+            // variadic arguments are unsupported
+            return None;
+        }
 
         let wrap_as_variadic = if should_wrap && !signature.is_variadic() {
             utils::wrap_as_variadic_fn(ctx, signature, name)
@@ -4314,14 +4317,14 @@ impl CodeGenerator for Function {
 
         let tokens = quote! {
             impl Sandboxed {
-                pub unsafe fn #ident (&mut self, #( #transformed_args ),* ) #transformed_ret {
+                pub fn #ident (&mut self, #( #transformed_args ),* ) #transformed_ret {
                     #wasm_link_attribute
                     extern #abi {
                         #(#attributes)*
                         fn #ident ( #( #args ),* ) #ret;
                     }
 
-                    #call_expr
+                    unsafe { #call_expr }
                 }
             }
         };

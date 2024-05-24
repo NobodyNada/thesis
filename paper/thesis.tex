@@ -1,0 +1,57 @@
+\documentclass[onehalf,11pt]{beavtex}
+\title{Type-Safe Sandboxing of Memory-Unsafe C/C++ Libraries for Rust Programs}
+\author{Jonathan Keller}
+\degree{Master of Science}
+\doctype{Thesis}
+\department{Electrical Engineering and Computer Science}
+\depttype{School}
+\depthead{Head}
+\major{Computer Science}
+\advisor{Yeongjin Jang}
+\coadvisor{Yeongjin Jang}
+\submitdate{May 20, 2024}
+\commencementyear{2024}
+\input{abstract}
+
+% \usepackage{algorithm}
+% \usepackage{algorithmic}
+
+% common packages
+\include{pkgs}
+
+\newcommand{\sys}{\mbox{\textsc{Die}}\xspace}
+
+% ref. http://en.wikibooks.org/wiki/LaTeX/Colors
+\newcommand{\YJ}[1]{\textcolor{blue}{MK: #1}}
+\newcommand{\JK}[1]{\textcolor{orange}{SK: #1}}
+\newcommand{\XX}[0]{\textcolor{red}{XXX}}
+\newcommand{\XXX}[1]{\textcolor{red}{XXX: #1}}
+\newcommand{\TODO}[1]{\textcolor{Melon}{TODO: #1}}
+
+\newcounter{definition}
+\newcommand\definitionautorefname{Definition}
+\DeclareCaptionType{definition}
+%\newfloat{definition}{htbp}{.nb}
+
+\input{cmds}
+\input{rev}
+
+\begin{document}
+\maketitle
+
+\mainmatter
+
+\input{intro}
+\input{background}
+\input{overview}
+\input{design}
+\input{impl}
+\input{eval}
+\input{discussion}
+\input{comparison}
+\input{conclusion}
+
+\bibliographystyle{plain}
+\bibliography{thesis,conf}
+
+\end{document}

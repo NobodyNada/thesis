@@ -7,6 +7,13 @@ members = [
 
 [package]
 name = "thesis"
+edition = "2021"
+
+[features]
+default = ["mpk", "cet"]
+bench = []
+mpk = ["mpk/mpk"]
+cet = ["sandboxed/cet"]
 
 [dependencies]
 sandboxed = { path = "./sandboxed" }

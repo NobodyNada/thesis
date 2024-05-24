@@ -1,0 +1,10 @@
+\chapter{Conclusion}
+
+We demonstrate that MPK can be used to provide lightweight, low-overhead, and robust sandboxing of
+memory-unsafe code within a Rust program. Our technique both prevents undefined behavior in
+memory-unsafe code from corrupting memory used by safe portions of the program, and additionally
+prevents invalid values (such as corrupt pointers) returned from memory-unsafe code from inducing
+undefined behavior within memory-safe portions of the program. We implemented a modified version of
+\cc{bindgen} to automatically generate thunk functions to securely and type-safely call and return
+from sandboxed functions, with a performance overhead of approximately 25ns per function call
+on our test system.

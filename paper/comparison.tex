@@ -1,0 +1,41 @@
+\chapter{Related Work}
+
+In this section, we compare our work to other research in this area, namely Enclosure by Goshn et
+al. \cite{ghoshn:enclosure} and PKRU-safe by Kirth et al. \cite{kirth:pkru}.
+
+\paragraph{Enclosure} Ghoshn et al.~\cite{ghoshn:enclosure} implemented a language-level approach to
+sandboxing, using either MPK or Intel VT-x to divide the memory space into \textit{enclosures} that
+are accessible only by the owning module. Their work extends contemporary programming languages with
+syntax and semantics to support the notion of calling functions defined in other enclosures and
+exchanging data between enclosures. Their work is more generalized than ours, supporting many
+enclosures in the same program, along with nested enclosures, and allowing precise specification
+over how data should be shared between enclosures. However, they do not appear to address the issue
+of misbehaving enclosed code inducing memory corruption within the calling code, such as by
+returning invalid pointers.
+
+\paragraph{PKRU-safe} Kirth et al.~\cite{kirth:pkru} address the same problem as us: isolating memory-safe Rust
+programs from memory-unsafe dependencies. Their implementation functions without requiring any
+modifications to the Rust application or each dependencies, by using dynamic instrumentation to
+determine which of the program's heap allocations should be accessible from unsafe dependencies and
+using the results of the instrumentation to apply memory protection keys.
+
+This approach is both a strength and a weakness: functioning with zero code changes is a significant
+advantage over our approach. However, it also requires significant compiler modifications whereas
+our work functions on unmodified, upstream \cc{rustc}. Their use of dynamic program analysis to
+determine the sandbox boundaries raises the possibility of the boundaries being placed in incorrect
+or unexpected locations: if their instrumentation pass does not achieve full coverage of the
+program, it may misidentify whether an allocation needs to be accessible from within sandboxed code,
+causing crashes at runtime. Additionally, since the analysis happens implicitly and automatically,
+PKRU-safe may decide that an allocation needs to be accessible from sandboxed code even though the
+developer expects it to be protected. For these reasons, we decided on an approach that uses static
+type-based analysis and requires the developer to explicitly consider and delineate sandbox
+boundaries within their source code. Lastly, PKRU-safe does not protect stack variables or global
+variables, and (like Enclosure) does not address the issue of unsafe code inducing memory corruption
+by returning invalid values to safe code.
+
+Both of these approaches have advantages and disadvantages as compared to our work. We believe our
+work demonstrates that low-overhead, secure, and practical sandboxing can be to implement in
+production software today with no need for custom tooling or new programming language features.
+Additionally, we believe our approach of using the type system to allow safe code to freely access
+pointers to sandboxed data is a novel approach to preventing undefined behavior and ensuring
+security when exchanging data across a sandbox.
