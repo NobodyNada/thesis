@@ -381,7 +381,7 @@
   \begin{center}
     ${}^\copyright$Copyright by \@author\\
     \@submitdate \\
-    All Rights Reserved
+    CC-BY-SA 4.0
   \end{center}
   \end{singlespacing}
   \clearpage
